@@ -6,4 +6,4 @@ This repository contains the implementation of the p2p chat and VoIP app in Java
 - Text send/receive over UDP
 - VoIP using UDP
 
-- The original description of the assignment can be found [here](https://sites.google.com/view/computer-networks-ii/%CE%B5%CF%81%CE%B3%CE%B1%CF%83%CE%AF%CE%B5%CF%82)
+The original description of the assignment can be found [here](https://sites.google.com/view/computer-networks-ii/%CE%B5%CF%81%CE%B3%CE%B1%CF%83%CE%AF%CE%B5%CF%82)
