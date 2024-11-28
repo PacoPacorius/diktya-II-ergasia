@@ -16,7 +16,7 @@ import java.awt.event.*;
 import java.awt.Color;
 import java.lang.Thread;
 
-public class App extends Frame implements WindowListener, ActionListener {
+public class App extends Frame implements WindowListener, ActionListener, Runnable {
 
 	/*
 	 * Definition of the app's fields
@@ -31,7 +31,11 @@ public class App extends Frame implements WindowListener, ActionListener {
 	static JButton callButton;				
 	
 	// TODO: Please define and initialize your variables here...
+	public void run() {
+		// listen for new messages here, call it from the main do ... while maybe?
+	}
 	
+
 	/**
 	 * Construct the app's frame and initialize important parameters
 	 */
@@ -96,8 +100,11 @@ public class App extends Frame implements WindowListener, ActionListener {
 		/*
 		 * 2. 
 		 */
+		
+		
 		do{		
-			// TODO: Your code goes here...
+			// TODO: Your code goes here...	
+			
 		}while(true);
 	}
 	
@@ -118,6 +125,11 @@ public class App extends Frame implements WindowListener, ActionListener {
 			// The "Send" button was clicked
 			
 			// TODO: Your code goes here...
+			String text = App.inputTextField.getText();
+			App.inputTextField.setText("");
+			System.out.println("I am everyone I ever met...");
+			App.textArea.append("I am everyone I ever met" + newline);
+			App.textArea.append("Me: " + text);
 		
 			
 		}else if(e.getSource() == callButton){
@@ -173,4 +185,6 @@ public class App extends Frame implements WindowListener, ActionListener {
 	public void windowOpened(WindowEvent e) {
 		// TODO Auto-generated method stub	
 	}
+	
+	
 }
