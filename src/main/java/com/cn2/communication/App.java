@@ -103,7 +103,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		
 		
 		do{		
-			// TODO: Your code goes here...	
+			// TODO: Your code goes here...
 			
 		}while(true);
 	}
@@ -125,13 +125,51 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			// The "Send" button was clicked
 			
 			// TODO: Your code goes here...
+			
+			/* erase text in input field and show it in text area */
 			String text = App.inputTextField.getText();
 			App.inputTextField.setText("");
-			System.out.println("I am everyone I ever met...");
-			App.textArea.append("I am everyone I ever met" + newline);
 			App.textArea.append("Me: " + text);
-		
 			
+			/* Initialize udp datagram packet with text string */
+			InetAddress local;
+			try {
+				local = InetAddress.getByName("127.0.0.1");
+			} catch (UnknownHostException e1) {
+				System.out.println("Cannot get localhost address, quitting...");
+				return;
+			}
+			InetAddress desk;
+			try {
+				desk = InetAddress.getByName("192.168.1.15");
+			} catch (UnknownHostException e1) {
+				System.out.println("Cannot get localhost address, quitting...");
+				return;
+			}
+			System.out.println("Sending to: " + desk);
+			
+			/* ready the udp datagram */ 
+			byte[] payload = text.getBytes();
+			
+			DatagramPacket test_send = new DatagramPacket(payload, payload.length, desk, 26557);
+			
+			/* create a udp socket */
+			DatagramSocket socket;
+			try {
+				socket = new DatagramSocket(26555);
+			} catch (SocketException e1) {
+				System.out.println("Cannot open socket, quitting...");
+				return;
+			}
+			
+			/* send the datagram through the socket */
+			try {
+				socket.send(test_send);
+			} catch (IOException e1) {
+				System.out.println("Cannot send datagram through socket for whatever reason");
+				return;
+			}
+//			socket.close();
 		}else if(e.getSource() == callButton){
 			
 			// The "Call" button was clicked
