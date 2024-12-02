@@ -32,8 +32,14 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	
 	// TODO: Please define and initialize your variables here...
 	public void run() {
-		// listen for new messages here, call it from the main do ... while maybe?
+		
 	}
+	String input_text;	
+	InetAddress dest;
+	DatagramPacket text_sender;
+	DatagramSocket text_sender_socket;
+	int text_dest_port = 26557;
+	int text_src_port = 26555;
 	
 
 	/**
@@ -103,7 +109,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		
 		
 		do{		
-			// TODO: Your code goes here...	
+			// TODO: Your code goes here...
 			
 		}while(true);
 	}
@@ -124,13 +130,51 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			
 			// The "Send" button was clicked
 			
-			// TODO: Your code goes here...
-			String text = App.inputTextField.getText();
-			App.inputTextField.setText("");
-			System.out.println("I am everyone I ever met...");
-			App.textArea.append("I am everyone I ever met" + newline);
-			App.textArea.append("Me: " + text);
-		
+			/* * * * * * * * * * * * * * * * * * * * * * * * *
+			 * TODO: make each packet 1024 bytes long max! * *
+			 * * * * * * * * * * * * * * * * * * * * * * * * */
+			
+			/* erase text in input field and show it in text area */
+			if(App.inputTextField.getText().length() > 0) {
+				String input_text = App.inputTextField.getText();
+				App.inputTextField.setText("");
+				App.textArea.append("Me: " + input_text + newline);
+				
+				/* Initialize udp datagram packet */
+				try {
+					dest = InetAddress.getByName("192.168.1.15");
+				} catch (UnknownHostException e1) {
+					System.out.println("Cannot get localhost address, quitting...");
+					return;
+				}
+				System.out.println("Sending to: " + dest);
+				
+				/* load the text string in the udp datagram */ 
+				byte[] payload = input_text.getBytes();
+				text_sender = new DatagramPacket(payload, payload.length, dest, 26557);
+				
+				/* create a udp socket */
+				try {
+					text_sender_socket = new DatagramSocket(26555);
+				} catch (SocketException e1) {
+					System.out.println("Cannot open socket, quitting...");
+					return;
+				}
+				
+				/* send the datagram through the socket */
+				try {
+					text_sender_socket.send(text_sender);
+				} catch (IOException e1) {
+					System.out.println("Cannot send datagram through socket for whatever reason");
+					return;
+				}
+				text_sender_socket.close();
+			}
+			else {
+				System.out.println("You need to type something genius!");
+			}
+			
+			
 			
 		}else if(e.getSource() == callButton){
 			
