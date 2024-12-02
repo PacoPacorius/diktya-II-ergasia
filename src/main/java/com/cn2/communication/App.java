@@ -38,8 +38,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	InetAddress dest;
 	DatagramPacket text_sender;
 	DatagramSocket text_sender_socket;
-	int text_dest_port = 26557;
-	int text_src_port = 26555;
+	static int text_dest_port = 26557;
+	static int text_src_port = 26555;
 	
 
 	/**
@@ -95,23 +95,41 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	 * new messages.
 	 */
 	public static void main(String[] args){
-	
-		/*
-		 * 1. Create the app's window
-		 */
-		App app = new App("CN2 - AUTH");  // TODO: You can add the title that will displayed on the Window of the App here																		  
+		 // 1. Create the app's window
+		App app = new App("CN2 - AUTH - TEAM AE");  // TODO: You can add the title that will displayed on the Window of the App here																		  
 		app.setSize(500,250);				  
 		app.setVisible(true);				  
 
-		/*
-		 * 2. 
-		 */
 		
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+		 * TODO: add threading to include call simultaneously !* *
+		 * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 		
-		do{		
-			// TODO: Your code goes here...
-			
-		}while(true);
+		// 2. Initialize UDP socket for receiving messages
+	    DatagramSocket receiverSocket = null;
+	    try {
+	        receiverSocket = new DatagramSocket(text_dest_port); // Listening on destination port
+	        System.out.println("Listening for messages on port " + text_dest_port);
+	    } catch (SocketException e) {
+	        System.out.println("Failed to open socket: " + e.getMessage());
+	        System.exit(1);
+	    }
+
+	    // 3. Continuously listen for incoming messages
+	    byte[] buffer = new byte[1024]; // Buffer for incoming packets
+	    while (true) {
+	        try {
+	            DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
+	            receiverSocket.receive(incomingPacket);
+
+	            // Extract message and display it in the text area
+	            String receivedMessage = new String(incomingPacket.getData(), 0, incomingPacket.getLength());
+	            App.textArea.append("Friend: " + receivedMessage + newline);
+
+	        } catch (IOException e) {
+	            System.out.println("Error receiving message: " + e.getMessage());
+	        }
+	    }
 	}
 	
 	/**
@@ -142,7 +160,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 				
 				/* Initialize udp datagram packet */
 				try {
-					dest = InetAddress.getByName("192.168.1.15");
+					dest = InetAddress.getByName("127.0.0.1");
 				} catch (UnknownHostException e1) {
 					System.out.println("Cannot get localhost address, quitting...");
 					return;
@@ -151,11 +169,11 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 				
 				/* load the text string in the udp datagram */ 
 				byte[] payload = input_text.getBytes();
-				text_sender = new DatagramPacket(payload, payload.length, dest, 26557);
+				text_sender = new DatagramPacket(payload, payload.length, dest, text_dest_port);
 				
 				/* create a udp socket */
 				try {
-					text_sender_socket = new DatagramSocket(26555);
+					text_sender_socket = new DatagramSocket(text_src_port);
 				} catch (SocketException e1) {
 					System.out.println("Cannot open socket, quitting...");
 					return;
