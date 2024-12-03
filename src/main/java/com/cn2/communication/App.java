@@ -124,12 +124,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			
 			// The "Send" button was clicked
 			
-			// TODO: Your code goes here...
-			String text = App.inputTextField.getText();
-			App.inputTextField.setText("");
-			System.out.println("I am everyone I ever met...");
-			App.textArea.append("I am everyone I ever met" + newline);
-			App.textArea.append("Me: " + text);
 		
 			
 		}else if(e.getSource() == callButton){
