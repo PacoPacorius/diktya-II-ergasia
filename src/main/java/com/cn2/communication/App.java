@@ -34,12 +34,14 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	public void run() {
 		
 	}
-	String input_text;	
-	InetAddress dest;
-	DatagramPacket text_sender;
-	DatagramSocket text_sender_socket;
+	/* 8 * 8 * 8 * 8 * 8 * 8 *
+	 * Vars for sending text *
+	 * 8 * 8 * 8 * 8 * 8 * 8 */
+	
 	int text_dest_port = 26557;
-	int text_src_port = 26555;
+	int text_src_port = 26555;		// these two ports probably don't have to be separate, the OS should handle port traffic
+	String dest_addr = "192.168.1.15";
+	int packet_length = 1024;
 	
 
 	/**
@@ -134,40 +136,65 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			 * TODO: make each packet 1024 bytes long max! * *
 			 * * * * * * * * * * * * * * * * * * * * * * * * */
 			
+			/* declare all variables here
+			 * 
+			 */
+			String input_text;	
+			InetAddress dest;
+			DatagramPacket text_sender;
+			DatagramSocket text_sender_socket;
+			
 			/* erase text in input field and show it in text area */
 			if(App.inputTextField.getText().length() > 0) {
-				String input_text = App.inputTextField.getText();
+				input_text = App.inputTextField.getText();
 				App.inputTextField.setText("");
 				App.textArea.append("Me: " + input_text + newline);
 				
+				
+				/* create a udp socket */
+				try {
+					text_sender_socket = new DatagramSocket(text_src_port);
+				} catch (SocketException e1) {
+					System.out.println("Cannot open socket, quitting...");
+					return;
+				}
+				
 				/* Initialize udp datagram packet */
 				try {
-					dest = InetAddress.getByName("192.168.1.15");
+					dest = InetAddress.getByName(dest_addr);
 				} catch (UnknownHostException e1) {
 					System.out.println("Cannot get localhost address, quitting...");
 					return;
 				}
 				System.out.println("Sending to: " + dest);
 				
-				/* load the text string in the udp datagram */ 
+				
+				/* prepare to divide text string into packets of 1024 */ 
 				byte[] payload = input_text.getBytes();
-				text_sender = new DatagramPacket(payload, payload.length, dest, 26557);
-				
-				/* create a udp socket */
-				try {
-					text_sender_socket = new DatagramSocket(26555);
-				} catch (SocketException e1) {
-					System.out.println("Cannot open socket, quitting...");
-					return;
+				int multiplier = payload.length / 1024 + 1;
+				int modulo = payload.length % 1024;
+				System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
+				for (int i = 0; i < multiplier; i++) {
+					System.out.println("i = " + i);
+					/* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes */
+					if(i == multiplier - 1) {
+						text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
+					} 
+					else {
+						text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);	
+					}
+					
+					
+					/* send the datagram through the socket */
+					try {
+						text_sender_socket.send(text_sender);
+					} catch (IOException e1) {
+						System.out.println("Cannot send datagram through socket for whatever reason");
+						return;
+					}
+					
 				}
 				
-				/* send the datagram through the socket */
-				try {
-					text_sender_socket.send(text_sender);
-				} catch (IOException e1) {
-					System.out.println("Cannot send datagram through socket for whatever reason");
-					return;
-				}
 				text_sender_socket.close();
 			}
 			else {
