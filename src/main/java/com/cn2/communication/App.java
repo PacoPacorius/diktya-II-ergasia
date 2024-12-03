@@ -37,7 +37,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	/* 8 * 8 * 8 * 8 * 8 * 8 *
 	 * Vars for sending text *
 	 * 8 * 8 * 8 * 8 * 8 * 8 */
-	
 	int text_dest_port = 26557;
 	int text_src_port = 26555;		// these two ports probably don't have to be separate, the OS should handle port traffic
 	String dest_addr = "192.168.1.15";
@@ -131,25 +130,17 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		if (e.getSource() == sendButton){
 			
 			// The "Send" button was clicked
-			
-			/* * * * * * * * * * * * * * * * * * * * * * * * *
-			 * TODO: make each packet 1024 bytes long max! * *
-			 * * * * * * * * * * * * * * * * * * * * * * * * */
-			
-			/* declare all variables here
-			 * 
-			 */
 			String input_text;	
 			InetAddress dest;
 			DatagramPacket text_sender;
 			DatagramSocket text_sender_socket;
+			byte[] payload;
+			int multiplier; int modulo;
 			
-			/* erase text in input field and show it in text area */
+			
+			/* get text from text area */
 			if(App.inputTextField.getText().length() > 0) {
 				input_text = App.inputTextField.getText();
-				App.inputTextField.setText("");
-				App.textArea.append("Me: " + input_text + newline);
-				
 				
 				/* create a udp socket */
 				try {
@@ -170,20 +161,23 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 				
 				
 				/* prepare to divide text string into packets of 1024 */ 
-				byte[] payload = input_text.getBytes();
-				int multiplier = payload.length / 1024 + 1;
-				int modulo = payload.length % 1024;
-				System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
+				payload = input_text.getBytes();
+				multiplier = payload.length / 1024 + 1;
+				modulo = payload.length % 1024;
+				// System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
 				for (int i = 0; i < multiplier; i++) {
-					System.out.println("i = " + i);
-					/* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes */
+					// System.out.println("i = " + i);
+					
+					/* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes. 
+					 * if the ith packet is loaded, send 1024 bytes. if the final packet is loaded, send any remaining
+					 * bytes (this is always <= 1024).
+					 * */
 					if(i == multiplier - 1) {
 						text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
 					} 
 					else {
 						text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);	
 					}
-					
 					
 					/* send the datagram through the socket */
 					try {
@@ -195,6 +189,11 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 					
 				}
 				
+				/* erase text in input field and show it in text area */
+				App.inputTextField.setText("");
+				App.textArea.append("Me: " + input_text + newline);
+				
+				/* close socket, prevent resource leak */
 				text_sender_socket.close();
 			}
 			else {
