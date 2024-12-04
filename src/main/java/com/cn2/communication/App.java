@@ -148,7 +148,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	
 	// VoIP Handling Method
 	private static void handleVoIP() {
-		System.out.println("inside the handle function");
 	    try (DatagramSocket voipSocket = new DatagramSocket(voip_src_port)) {
 	        InetAddress dest = InetAddress.getByName(dest_addr);
 
