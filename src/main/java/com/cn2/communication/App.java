@@ -16,6 +16,9 @@ import java.awt.event.*;
 import java.awt.Color;
 import java.lang.Thread;
 
+import javax.sound.sampled.*;
+
+
 public class App extends Frame implements WindowListener, ActionListener, Runnable {
 
 	/*
@@ -34,15 +37,13 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	public void run() {
 		
 	}
-	/* 8 * 8 * 8 * 8 * 8 * 8 *
-	 * Vars for sending text *
-	 * 8 * 8 * 8 * 8 * 8 * 8 */
-	int text_dest_port = 26557;
-	int text_src_port = 26555;		// these two ports probably don't have to be separate, the OS should handle port traffic
-	String dest_addr = "192.168.1.15";
-	int packet_length = 1024;
+	/* ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧
+	 * ▧ ▧ vars for voip send ▧ ▧
+	 * ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ */
+	AudioFormat sample_format; /* encoding technique, channels, bps, byte order, signed */
+	boolean stopped = false;
 	
-
+	
 	/**
 	 * Construct the app's frame and initialize important parameters
 	 */
@@ -108,7 +109,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		 * 2. 
 		 */
 		
-		
 		do{		
 			// TODO: Your code goes here...
 			
@@ -128,78 +128,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		 * Check which button was clicked.
 		 */
 		if (e.getSource() == sendButton){
-			
-			// The "Send" button was clicked
-			String input_text;	
-			InetAddress dest;
-			DatagramPacket text_sender;
-			DatagramSocket text_sender_socket;
-			byte[] payload;
-			int multiplier; int modulo;
-			
-			
-			/* get text from text area */
-			if(App.inputTextField.getText().length() > 0) {
-				input_text = App.inputTextField.getText();
-				
-				/* create a udp socket */
-				try {
-					text_sender_socket = new DatagramSocket(text_src_port);
-				} catch (SocketException e1) {
-					System.out.println("Cannot open socket, quitting...");
-					return;
-				}
-				
-				/* Initialize udp datagram packet */
-				try {
-					dest = InetAddress.getByName(dest_addr);
-				} catch (UnknownHostException e1) {
-					System.out.println("Cannot get localhost address, quitting...");
-					return;
-				}
-				System.out.println("Sending to: " + dest);
-				
-				
-				/* prepare to divide text string into packets of 1024 */ 
-				payload = input_text.getBytes();
-				multiplier = payload.length / 1024 + 1;
-				modulo = payload.length % 1024;
-				// System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
-				for (int i = 0; i < multiplier; i++) {
-					// System.out.println("i = " + i);
-					
-					/* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes. 
-					 * if the ith packet is loaded, send 1024 bytes. if the final packet is loaded, send any remaining
-					 * bytes (this is always <= 1024).
-					 * */
-					if(i == multiplier - 1) {
-						text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
-					} 
-					else {
-						text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);	
-					}
-					
-					/* send the datagram through the socket */
-					try {
-						text_sender_socket.send(text_sender);
-					} catch (IOException e1) {
-						System.out.println("Cannot send datagram through socket for whatever reason");
-						return;
-					}
-					
-				}
-				
-				/* erase text in input field and show it in text area */
-				App.inputTextField.setText("");
-				App.textArea.append("Me: " + input_text + newline);
-				
-				/* close socket, prevent resource leak */
-				text_sender_socket.close();
-			}
-			else {
-				System.out.println("You need to type something genius!");
-			}
-			
+						
 			
 			
 		}else if(e.getSource() == callButton){
@@ -207,7 +136,44 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			// The "Call" button was clicked
 			
 			// TODO: Your code goes here...
+			/* TargetDataLine <- Mixer <- SourceDataLine <- Microphone*/
+			int buffer_size = 1024;
+			/* endianness should not matter here since we're using PCM, but we're using big endian */
+			AudioFormat format = new AudioFormat(8000, 8, 1, true, true);	
 			
+			DataLine.Info info = new DataLine.Info(TargetDataLine.class, format); // format is an AudioFormat object
+			if (AudioSystem.isLineSupported(info) == false) {
+				System.out.println("Line is not supported! Quitting...");
+				return;
+			}
+			// Obtain and open the line.
+			TargetDataLine line = null;
+			try {
+    			line = (TargetDataLine) AudioSystem.getLine(info);
+    			line.open(format, buffer_size);
+			} catch (LineUnavailableException ex) {
+				System.out.println("Line unavailable, quitting...");
+				return;
+			}
+			
+			// Assume that the TargetDataLine, line, has already
+			// been obtained and opened.
+			ByteArrayOutputStream out  = new ByteArrayOutputStream();
+			int numBytesRead;		
+			byte[] data = new byte[buffer_size / 5];
+
+			line.start();
+			
+			// Here, stopped is a global boolean set by another thread.
+			int i = 0;
+			while (stopped != true) {
+			   // Read the next chunk of data from the TargetDataLine.
+			   numBytesRead =  line.read(data, 0, data.length);
+			   // Save this chunk of data.
+			   out.write(data, 0, numBytesRead);
+			   System.out.println("out: " + out.toByteArray()[i]);
+			   i++;
+			}     
 			
 		}
 			
