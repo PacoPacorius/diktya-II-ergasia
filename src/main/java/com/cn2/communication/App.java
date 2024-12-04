@@ -37,11 +37,18 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	String input_text;	
 	InetAddress dest;
 	DatagramPacket text_sender;
-	DatagramSocket text_sender_socket;
-	static int text_dest_port = 26557;
-	static int text_src_port = 26555;
+	static DatagramSocket text_sender_socket;
+	Thread voipThread = null;
 	
-
+	static int text_dest_port = 26557;
+	static int text_src_port = 26555;		// these two ports probably don't have to be separate, the OS should handle port traffic
+											// pantws emena den anoigei tautoxrona se duo kanei quitting
+	static int voip_dest_port = 26565;
+	static int voip_src_port = 26567;
+	static String dest_addr = "127.0.0.1";
+	static int packet_length = 1024; // replace all buffers with this in the end
+	static boolean isCalling = false;
+	
 	/**
 	 * Construct the app's frame and initialize important parameters
 	 */
@@ -85,51 +92,95 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		 * 3. Linking the buttons to the ActionListener
 		 */
 		sendButton.addActionListener(this);			
-		callButton.addActionListener(this);	
+		callButton.addActionListener(this);
 
-		
+
 	}
 	
 	/**
 	 * The main method of the application. It continuously listens for
 	 * new messages.
 	 */
-	public static void main(String[] args){
-		 // 1. Create the app's window
-		App app = new App("CN2 - AUTH - TEAM AE");  // TODO: You can add the title that will displayed on the Window of the App here																		  
-		app.setSize(500,250);				  
-		app.setVisible(true);				  
+	public static void main(String[] args) {
+	    // 1. Create the app's window
+	    App app = new App("CN2 - AUTH - TEAM AE");
+	    app.setSize(500, 250);
+	    app.setVisible(true);
 
-		
-		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-		 * TODO: add threading to include call simultaneously !* *
-		 * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-		
-		// 2. Initialize UDP socket for receiving messages
-	    DatagramSocket receiverSocket = null;
-	    try {
-	        receiverSocket = new DatagramSocket(text_dest_port); // Listening on destination port
-	        System.out.println("Listening for messages on port " + text_dest_port);
-	    } catch (SocketException e) {
-	        System.out.println("Failed to open socket: " + e.getMessage());
-	        System.exit(1);
+	    // 2. Start text thread - always running
+	    byte[] buffer = new byte[1024];
+	    
+	    Thread textThread = new Thread(() -> handleText());
+	    textThread.start();	    
+
+	}
+	
+	// Text Handling Method
+	private static void handleText() {
+		try (DatagramSocket text_receiver_socket = new DatagramSocket(text_src_port) ) {
+			System.out.println("Listening for messages on port " + text_src_port);
+			
+			// Continuously listen for incoming text messages
+		    byte[] buffer = new byte[1024];
+
+		    while (true) {
+		        try {
+		            // Handle text messages
+		            DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
+		            text_receiver_socket.receive(incomingPacket);
+
+		            String receivedMessage = new String(incomingPacket.getData(), 0, incomingPacket.getLength());
+		            App.textArea.append("Friend: " + receivedMessage + newline);
+
+
+		        } catch (IOException e) {
+		            System.out.println("Error receiving message: " + e.getMessage());
+		        }
+		    }
+		    
+			
+		} catch (Exception e) {
+	        System.out.println("Error in text handling: " + e.getMessage());
 	    }
+		
+		
+	}
+	
+	// VoIP Handling Method
+	private static void handleVoIP() {
+		System.out.println("inside the handle function");
+	    try (DatagramSocket voipSocket = new DatagramSocket(voip_src_port)) {
+	        InetAddress dest = InetAddress.getByName(dest_addr);
 
-	    // 3. Continuously listen for incoming messages
-	    byte[] buffer = new byte[1024]; // Buffer for incoming packets
-	    while (true) {
-	        try {
-	            DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
-	            receiverSocket.receive(incomingPacket);
+	        byte[] sendBuffer = new byte[1024];
+	        byte[] receiveBuffer = new byte[1024];
+	        DatagramPacket sendPacket;
+	        DatagramPacket receivePacket;
 
-	            // Extract message and display it in the text area
-	            String receivedMessage = new String(incomingPacket.getData(), 0, incomingPacket.getLength());
-	            App.textArea.append("Friend: " + receivedMessage + newline);
+	        while (isCalling) {
+	            // Sending audio (example: mock audio data)
+	            sendBuffer = getMockAudioData();
+	            sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, dest, voip_dest_port);
+	            voipSocket.send(sendPacket);
 
-	        } catch (IOException e) {
-	            System.out.println("Error receiving message: " + e.getMessage());
+	            // Receiving audio
+	            receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+	            voipSocket.receive(receivePacket);
+	            processReceivedAudio(receivePacket.getData());
 	        }
+	    } catch (Exception e) {
+	        System.out.println("Error in VoIP handling: " + e.getMessage());
 	    }
+	}
+
+	// Mock Audio Data (Replace with real audio capture logic)
+	private static byte[] getMockAudioData() {
+	    return "mock audio data".getBytes(); // Replace with actual audio capture
+	}
+
+	// Process Received Audio (Replace with real audio playback logic)
+	private static void processReceivedAudio(byte[] data) {
+	    System.out.println("Received audio packet: " + new String(data)); // Replace with audio playback
 	}
 	
 	/**
@@ -144,48 +195,72 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		/*
 		 * Check which button was clicked.
 		 */
-		if (e.getSource() == sendButton){
+if (e.getSource() == sendButton){
 			
 			// The "Send" button was clicked
+			String input_text;	
+			InetAddress dest;
+			DatagramPacket text_sender;
+			byte[] payload;
+			int multiplier; int modulo;
 			
-			/* * * * * * * * * * * * * * * * * * * * * * * * *
-			 * TODO: make each packet 1024 bytes long max! * *
-			 * * * * * * * * * * * * * * * * * * * * * * * * */
 			
-			/* erase text in input field and show it in text area */
+			/* get text from text area */
 			if(App.inputTextField.getText().length() > 0) {
-				String input_text = App.inputTextField.getText();
-				App.inputTextField.setText("");
-				App.textArea.append("Me: " + input_text + newline);
+				input_text = App.inputTextField.getText();
+				
+				/* create a udp socket */
+				try {
+					text_sender_socket = new DatagramSocket(text_dest_port);
+				} catch (SocketException e1) {
+					System.out.println("Failed to open socket: " + e1.getMessage());
+					return;
+				}
 				
 				/* Initialize udp datagram packet */
 				try {
-					dest = InetAddress.getByName("127.0.0.1");
+					dest = InetAddress.getByName(dest_addr);
 				} catch (UnknownHostException e1) {
 					System.out.println("Cannot get localhost address, quitting...");
 					return;
 				}
 				System.out.println("Sending to: " + dest);
 				
-				/* load the text string in the udp datagram */ 
-				byte[] payload = input_text.getBytes();
-				text_sender = new DatagramPacket(payload, payload.length, dest, text_dest_port);
 				
-				/* create a udp socket */
-				try {
-					text_sender_socket = new DatagramSocket(text_src_port);
-				} catch (SocketException e1) {
-					System.out.println("Cannot open socket, quitting...");
-					return;
+				/* prepare to divide text string into packets of 1024 */ 
+				payload = input_text.getBytes();
+				multiplier = payload.length / 1024 + 1;
+				modulo = payload.length % 1024;
+				// System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
+				for (int i = 0; i < multiplier; i++) {
+					// System.out.println("i = " + i);
+					
+					/* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes. 
+					 * if the ith packet is loaded, send 1024 bytes. if the final packet is loaded, send any remaining
+					 * bytes (this is always <= 1024).
+					 * */
+					if(i == multiplier - 1) {
+						text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
+					} 
+					else {
+						text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);	
+					}
+					
+					/* send the datagram through the socket */
+					try {
+						text_sender_socket.send(text_sender);
+					} catch (IOException e1) {
+						System.out.println("Cannot send datagram through socket for whatever reason");
+						return;
+					}
+					
 				}
 				
-				/* send the datagram through the socket */
-				try {
-					text_sender_socket.send(text_sender);
-				} catch (IOException e1) {
-					System.out.println("Cannot send datagram through socket for whatever reason");
-					return;
-				}
+				/* erase text in input field and show it in text area */
+				App.inputTextField.setText("");
+				App.textArea.append("Me: " + input_text + newline);
+			
+				/* close socket, prevent resource leak */
 				text_sender_socket.close();
 			}
 			else {
@@ -195,11 +270,18 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			
 			
 		}else if(e.getSource() == callButton){
-			
 			// The "Call" button was clicked
+			// this starts the receiving VoIP thread 
+			if (!isCalling) {
+				System.out.println("Starting VoIP thread...");
+		        voipThread = new Thread(() -> handleVoIP());
+		        voipThread.start();		
+			}
+
+			isCalling = !isCalling;
 			
-			// TODO: Your code goes here...
 			
+	        
 			
 		}
 			
