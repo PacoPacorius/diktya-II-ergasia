@@ -1,7 +1,8 @@
 /* TODO: 
- * 1. make voice sending a separate thread
- * 2. make clicking the call button again terminate the call
+ * 1. make voice sending a separate thread -- done
+ * 2. make clicking the call button again terminate the call -- done
  * 3. dump captured packets to a file, test what is being captured
+ * 4. send packets over udp, packet length 1024
  */
 package com.cn2.communication;
 
@@ -46,7 +47,11 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	 * ▧ ▧ vars for voip send ▧ ▧
 	 * ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ */
 	AudioFormat sample_format; /* encoding technique, channels, bps, byte order, signed */
-	boolean stopped = false;
+	boolean isCalling = false;
+	Thread voipCaptureThread = null;
+	TargetDataLine captureLine = null;
+	int packet_length = 1024;
+	ByteArrayOutputStream out = null;
 	
 	
 	/**
@@ -133,58 +138,81 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		 * Check which button was clicked.
 		 */
 		if (e.getSource() == sendButton){
-						
+			System.out.println("I'm sending!");
 			
 			
 		}else if(e.getSource() == callButton){
 			
 			// The "Call" button was clicked
-			
-			// TODO: Your code goes here...
-			/* TargetDataLine <- Mixer <- SourceDataLine <- Microphone*/
-			int buffer_size = 1024;
-			/* endianness should not matter here since we're using PCM, but we're using big endian */
-			AudioFormat format = new AudioFormat(8000, 8, 1, true, true);	
-			
-			DataLine.Info info = new DataLine.Info(TargetDataLine.class, format); // format is an AudioFormat object
-			if (AudioSystem.isLineSupported(info) == false) {
-				System.out.println("Line is not supported! Quitting...");
-				return;
+			if(isCalling == false) {
+				/* audio capture new thread */
+				System.out.println("Starting audio capture thread...");
+				isCalling = true;
+				voipCaptureThread = new Thread( () -> handleSendVoIP());
+				voipCaptureThread.start();
 			}
-			// Obtain and open the line.
-			TargetDataLine line = null;
-			try {
-    			line = (TargetDataLine) AudioSystem.getLine(info);
-    			line.open(format, buffer_size);
-			} catch (LineUnavailableException ex) {
-				System.out.println("Line unavailable, quitting...");
-				return;
+			else if (isCalling == true) {
+				/* close line, drain audio buffer and send remaining bytes */
+				isCalling = false;
+				System.out.println("Audio thread should be over now");
+				/*
+				for(int i = 0; i < out.toByteArray().length; i++) {
+					System.out.println(out.toByteArray()[i]);
+				}*/
 			}
-			
-			// Assume that the TargetDataLine, line, has already
-			// been obtained and opened.
-			ByteArrayOutputStream out  = new ByteArrayOutputStream();
-			int numBytesRead;		
-			byte[] data = new byte[buffer_size / 5];
-
-			line.start();
-			
-			// Here, stopped is a global boolean set by another thread.
-			int i = 0;
-			while (stopped != true) {
-			   // Read the next chunk of data from the TargetDataLine.
-			   numBytesRead =  line.read(data, 0, data.length);
-			   // Save this chunk of data.
-			   out.write(data, 0, numBytesRead);
-			   System.out.println("out: " + out.toByteArray()[i]);
-			   i++;
-			}     
-			
 		}
 			
 
 	}
 
+	void handleVoIP() {
+		/* TargetDataLine <- Mixer <- SourceDataLine <- Microphone*/
+		int buffer_size = 1024;
+		/* endianness should not matter here since we're using PCM, but we're using big endian */
+		AudioFormat format = new AudioFormat(8000, 8, 1, true, true);	
+		
+		DataLine.Info info = new DataLine.Info(TargetDataLine.class, format); // format is an AudioFormat object
+		if (AudioSystem.isLineSupported(info) == false) {
+			System.out.println("Line is not supported! Quitting...");
+			return;
+		}
+		/* Obtain and open the line */
+		// captureLine = null;
+		try {
+			captureLine = (TargetDataLine) AudioSystem.getLine(info);
+			captureLine.open(format, buffer_size);
+		} catch (LineUnavailableException ex) {
+			System.out.println("Line unavailable, quitting...");
+			return;
+		}
+		
+		/* set audio buffer and BAOS to handle our bytes later */
+		out  = new ByteArrayOutputStream();
+		int numBytesRead;		
+		byte[] data = new byte[buffer_size / 5];
+
+		captureLine.start();
+		
+		/* stop when we press call button again */
+		int i = 0;
+		while (isCalling == true) {
+		   /* Read the next chunk of data from the TargetDataLine to audio buffer */
+		   numBytesRead =  captureLine.read(data, 0, data.length);
+		   /* Save this chunk of data to BAOS */
+		   out.write(data, 0, numBytesRead);
+		   System.out.println("out: " + out.toByteArray()[i]);
+		   sendVoicePackets();
+//		   if(i % 4 == 0) {
+//		   		System.out.println("out size: " + out.size());
+//		   }
+		   i++;
+		}     
+		captureLine.close();
+	}
+	
+	void sendVoicePackets() {
+		
+	}
 	/**
 	 * These methods have to do with the GUI. You can use them if you wish to define
 	 * what the program should do in specific scenarios (e.g., when closing the 
