@@ -3,6 +3,7 @@
  * 2. make clicking the call button again terminate the call -- done
  * 3. dump captured packets to a file, test what is being captured
  * 4. send packets over udp, packet length 1024 -- well, it's sending something alright! doesn't really look like audio though...
+ * 		a. still need to flush the BAOS!
  */
 package com.cn2.communication;
 
@@ -173,16 +174,10 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		InetAddress dest;
 		DatagramSocket voice_send_socket;
 		DatagramPacket voice_send = null;
-		int packet_number = 0;	/* we are actually not numbering packets, this is to help iterate through the BAOS
+		int packet_number = 1;	/* we are actually not numbering packets, this is to help iterate through the BAOS
 		
 		/* create a udp socket	*/ 
-		try {
-			voice_send_socket = new DatagramSocket(voip_src_port);
-		} catch (SocketException e1) {
-			System.out.println("Cannot open call socket, quitting...");
-			return;
-		}
-
+		
 		/* Initialize destination address */
 		try {
 			dest = InetAddress.getByName(dest_addr);
@@ -191,7 +186,13 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			return;
 		}
 		System.out.println("Sending to: " + dest);
-		
+		try {
+			voice_send_socket = new DatagramSocket(voip_src_port);
+		} catch (SocketException e1) {
+			System.out.println("Cannot open call socket, quitting...");
+			return;
+		}
+
 		/* start audio capture */
 		int buffer_size = 1024;
 		/* endianness should not matter here since we're using PCM, but we're using big endian */
@@ -226,24 +227,18 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		   /* Save this chunk of data to BAOS */
 		   out.write(data, 0, numBytesRead);
 		   System.out.println("out: " + out.toByteArray()[i]);
-		   sendVoicePackets(packet_number, voice_send, voice_send_socket, dest);
-		   if(i % 4 == 0) {
-		   		System.out.println("out size: " + out.toByteArray().length);
-		   }
-		   i++;
-		}     
-		voice_send_socket.close();
-		captureLine.close();
-	}
-	
-	void sendVoicePackets(int packet_number, DatagramPacket voice_send, DatagramSocket voice_send_socket, InetAddress dest) {
-		byte[] audio_data = out.toByteArray();
-		int audio_data_length = audio_data.length;
-		
-		if(audio_data_length >= (packet_number + 1) * packet_length) {
-			voice_send = new DatagramPacket(audio_data, packet_number * packet_length, packet_length, dest, voip_dest_port);
-//			text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
-//			text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);	
+		   
+		   /* send udp datagram */
+		    byte[] audio_data = out.toByteArray();
+			int audio_data_length = audio_data.length;
+			
+			if(audio_data_length >= (packet_number) * packet_length) {
+				voice_send = new DatagramPacket(audio_data, (packet_number - 1) * packet_length, packet_length, dest, voip_dest_port);
+//				text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
+//				text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);
+				System.out.println("Sending packet " + (packet_number - 1) + " (" + packet_length + " bytes)");
+				System.out.println("Audio data total length: " + audio_data_length);
+				packet_number = packet_number + 1;
 				/* send the datagram through the socket */
 				try {
 					voice_send_socket.send(voice_send);
@@ -251,8 +246,20 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 					System.out.println("Cannot send voice datagram through socket for whatever reason");
 					return;
 				}
-				packet_number++;	
+						
 			}
+			i++;
+//		   sendVoicePackets(packet_number, voice_send, voice_send_socket, dest);
+//		   if(i % 4 == 0) {
+//		   		System.out.println("out size: " + out.toByteArray().length);
+//		   }
+		}     
+		voice_send_socket.close();
+		captureLine.close();
+	}
+	
+	void sendVoicePackets(int packet_number, DatagramPacket voice_send, DatagramSocket voice_send_socket, InetAddress dest) {
+		
 	}
 	
 	/**
