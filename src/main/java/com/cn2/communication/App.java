@@ -1,3 +1,8 @@
+/* TODO: 
+ * 1. make voice sending a separate thread
+ * 2. make clicking the call button again terminate the call
+ * 3. dump captured packets to a file, test what is being captured
+ */
 package com.cn2.communication;
 
 import java.io.*;
