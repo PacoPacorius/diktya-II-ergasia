@@ -1,9 +1,9 @@
 /* TODO: 
  * 1. make voice sending a separate thread -- done
  * 2. make clicking the call button again terminate the call -- done
- * 3. dump captured packets to a file, test what is being captured
- * 4. send packets over udp, packet length 1024 -- well, it's sending something alright! doesn't really look like audio though...
- * 		a. still need to flush the BAOS!
+ * 3. dump captured packets to a file, test what is being captured -- done
+ * 4. send packets over udp, packet length 1024 -- well, it's sending something alright! 
+ * 		a. still need to flush the BAOS probably!
  */
 package com.cn2.communication;
 
@@ -24,6 +24,8 @@ import java.awt.Color;
 import java.lang.Thread;
 
 import javax.sound.sampled.*;
+import javax.sound.sampled.spi.AudioFileWriter;
+import javax.sound.sampled.AudioFileFormat;
 
 
 public class App extends Frame implements WindowListener, ActionListener, Runnable {
@@ -219,6 +221,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 
 		captureLine.start();
 		
+		byte[] audio_data = null;
+		int audio_data_length = 0;
 		/* stop when we press call button again */
 		int i = 0;	
 		while (isCalling == true) {
@@ -229,8 +233,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		   System.out.println("out: " + out.toByteArray()[i]);
 		   
 		   /* send udp datagram */
-		    byte[] audio_data = out.toByteArray();
-			int audio_data_length = audio_data.length;
+		    audio_data = out.toByteArray();
+			audio_data_length = audio_data.length;
 			
 			if(audio_data_length >= (packet_number) * packet_length) {
 				voice_send = new DatagramPacket(audio_data, (packet_number - 1) * packet_length, packet_length, dest, voip_dest_port);
@@ -253,9 +257,34 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 //		   if(i % 4 == 0) {
 //		   		System.out.println("out size: " + out.toByteArray().length);
 //		   }
-		}     
+		}
 		voice_send_socket.close();
 		captureLine.close();
+		
+		/* debug what is being captured */
+		File file = new File("/home/pacopacorius/test.wav");
+		try {
+			file.createNewFile();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Error creating file");
+		}
+		ByteArrayInputStream audio_input = new ByteArrayInputStream(audio_data);
+		AudioInputStream total_collected_audio = new AudioInputStream(audio_input, format, audio_data_length);			
+		int bytes_written_to_file; 
+		try {
+			bytes_written_to_file = AudioSystem.write(total_collected_audio, AudioFileFormat.Type.WAVE, file);
+		} catch (IOException e) {
+			System.out.println("Couldn't write to file");
+			return;
+		}
+		try {
+			total_collected_audio.close();
+		} catch (IOException e) {
+			System.out.println("error in closing audioinputstream");
+		}
+		System.out.println("Written " + bytes_written_to_file + " bytes to file ~/test.wav");
+		
 	}
 	
 	void sendVoicePackets(int packet_number, DatagramPacket voice_send, DatagramSocket voice_send_socket, InetAddress dest) {
