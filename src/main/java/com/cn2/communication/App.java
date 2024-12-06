@@ -66,7 +66,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	AudioFormat sample_format; /* encoding technique, channels, bps, byte order, signed */
 	static boolean isCalling = false;
 	TargetDataLine captureLine = null;
-	int packet_length = 1024;
+	static int packet_length = 1024;
 	ByteArrayOutputStream out = null;
 	
 	/* keeps eclipse from complaining */
@@ -141,7 +141,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			System.out.println("Listening for messages on port " + text_dest_port);
 			
 			// Continuously listen for incoming text messages
-		    byte[] buffer = new byte[1024];
+		    byte[] buffer = new byte[packet_length];
 
 		    while (true) {
 		        try {
@@ -179,7 +179,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	    }
 
 	    // Set up audio play-back
-	    AudioFormat format = new AudioFormat(8000, 8, 1, true, true);
+	    AudioFormat format = new AudioFormat(24000, 8, 1, true, true);
 	    DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
 
 	    try {
@@ -191,7 +191,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	        return;
 	    }
 
-	    byte[] buffer = new byte[1024];
+	    byte[] buffer = new byte[packet_length];
 	    DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
 
 
@@ -266,8 +266,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 				
 				/* prepare to divide text string into packets of 1024 */ 
 				payload = input_text.getBytes();
-				multiplier = payload.length / 1024 + 1;
-				modulo = payload.length % 1024;
+				multiplier = payload.length / packet_length + 1;
+				modulo = payload.length % packet_length;
 				// System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
 				for (int i = 0; i < multiplier; i++) {
 					// System.out.println("i = " + i);
@@ -433,7 +433,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		captureLine.close();
 		
 		/* debug what is being captured */
-		File file = new File("/home/pacopacorius/test.wav");
+		File file = new File("D:\\Σχολή\\9ο εξάμηνο\\Δίκτυα Υπολογιστών ΙΙ\\Εργασία\\test.wav");
 		try {
 			file.createNewFile();
 		} catch (IOException e) {
@@ -457,7 +457,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		System.out.println("Written " + bytes_written_to_file + " bytes to file ~/test.wav");
 		
 	}
-	
+/*
 	private static void mockVoIPSender() {
 	    DatagramSocket mockSendSocket = null;
 	    try {
@@ -513,7 +513,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	        }
 	    }
 	}
-	
+*/
 	void sendVoicePackets(int packet_number, DatagramPacket voice_send, DatagramSocket voice_send_socket, InetAddress dest) {
 		
 	}
