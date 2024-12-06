@@ -45,11 +45,11 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	// Variable initialization
 	
 	// Ports and address
-	static int text_dest_port = 26557;
-	static int text_src_port = 26555;											
-	static int voip_dest_port = 26565;
-	static int voip_src_port = 26567;
-	String dest_addr = "192.168.1.15";
+	static int text_dest_port = 26555;
+	static int text_src_port = 26557;											
+	static int voip_dest_port = 26567;
+	static int voip_src_port = 26565;
+	String dest_addr = "192.168.100.22";
 	
 	// Variables for receiving VoIP - public to handle cleanup and avoid leaving socket or play-back open
 	static DatagramSocket voice_receive_socket = null;
@@ -167,7 +167,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	private static void receiveVoIP() {    
 	    try {
 	        // Open the receive socket
-	        voice_receive_socket = new DatagramSocket(voip_dest_port); // change this to src after tests are over
+	        voice_receive_socket = new DatagramSocket(voip_src_port); // change this to src after tests are over
 	        System.out.println("VoIP receiving thread started on port " + voip_src_port);
 	    } catch (SocketException e) {
 	        System.out.println("Cannot open receive socket: " + e.getMessage());
@@ -308,8 +308,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		    if(isCalling == false) { // Start call
 
 		        isCalling = true;
-		        voipCaptureThread = new Thread(() -> mockVoIPSender()); // MOCK DATA REMOVE THIS LATER
-		        //voipCaptureThread = new Thread(() -> sendVoIP());
+		        
+		        voipCaptureThread = new Thread(() -> sendVoIP());
 		        voipCaptureThread.start();
 		       
 		        voipReceiveThread = new Thread(() -> receiveVoIP());
