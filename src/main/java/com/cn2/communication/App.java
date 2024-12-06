@@ -42,18 +42,25 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	final static String newline="\n";		
 	static JButton callButton;				
 	
-	// TODO: Please define and initialize your variables here...
-
+	// Variable initialization
+	
+	// Ports and address
+	static int text_dest_port = 26557;
+	static int text_src_port = 26555;											
 	static int voip_dest_port = 26565;
 	static int voip_src_port = 26567;
 	String dest_addr = "192.168.1.15";
+	
+	// Threads
+	static Thread receiveTextThread = null;
+	Thread voipCaptureThread = null;
+	Thread voipReceiveThread = null;
 	
 	/* ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧
 	 * ▧ ▧ vars for voip send ▧ ▧
 	 * ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ */
 	AudioFormat sample_format; /* encoding technique, channels, bps, byte order, signed */
-	boolean isCalling = false;
-	Thread voipCaptureThread = null;
+	static boolean isCalling = false;
 	TargetDataLine captureLine = null;
 	int packet_length = 1024;
 	ByteArrayOutputStream out = null;
@@ -112,34 +119,100 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	 * The main method of the application. It continuously listens for
 	 * new messages.
 	 */
-	public static void main(String[] args){
-	
-		/*
-		 * 1. Create the app's window
-		 */
-		App app = new App("CN2 - AUTH");  // TODO: You can add the title that will displayed on the Window of the App here																		  
-		app.setSize(500,250);				  
-		app.setVisible(true);				  
+	public static void main(String[] args) {
+	    // 1. Create the app's window
+	    App app = new App("CN2 - AUTH - TEAM AE");
+	    app.setSize(500, 250);
+	    app.setVisible(true);
 
-		/*
-		 * 2. 
-		 */
-		
-		do{		
-			// TODO: Your code goes here...
-			
-		}while(true);
+	    // 2. Start text thread - infinite loop
+	    receiveTextThread = new Thread( () -> receiveText());
+	    receiveTextThread.start();	    
+
 	}
 	
+	// Text Handling Method
+	private static void receiveText() {
+		try (DatagramSocket text_receiver_socket = new DatagramSocket(text_src_port) ) {
+			System.out.println("Listening for messages on port " + text_src_port);
+			
+			// Continuously listen for incoming text messages
+		    byte[] buffer = new byte[1024];
+
+		    while (true) {
+		        try {
+		            // Handle text messages
+		            DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
+		            text_receiver_socket.receive(incomingPacket);
+
+		            String receivedMessage = new String(incomingPacket.getData(), 0, incomingPacket.getLength());
+		            App.textArea.append("Friend: " + receivedMessage + newline);
+
+
+		        } catch (IOException e) {
+		            System.out.println("Error receiving message: " + e.getMessage());
+		        }
+		    }
+		    
+			
+		} catch (Exception e) {
+	        System.out.println("Error in text handling: " + e.getMessage());
+	    }
+	}
+	
+	private static void receiveVoIP() {
+	    DatagramSocket voice_receive_socket = null;
+	    try {
+	        voice_receive_socket = new DatagramSocket(voip_dest_port);
+	        System.out.println("VoIP receiving thread started on port " + voip_src_port);
+	    } catch (SocketException e) {
+	        System.out.println("Cannot open receive socket: " + e.getMessage());
+	        return;
+	    }
+
+	    // Set up audio playback
+	    AudioFormat format = new AudioFormat(8000, 8, 1, true, true);
+	    DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+	    SourceDataLine playbackLine = null;
+	    try {
+	        playbackLine = (SourceDataLine) AudioSystem.getLine(info);
+	        playbackLine.open(format);
+	        playbackLine.start();
+	        System.out.println("Playback line started.");
+	    } catch (LineUnavailableException e) {
+	        System.out.println("Line unavailable for playback: " + e.getMessage());
+	        return;
+	    }
+
+	    byte[] buffer = new byte[1024];
+	    DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
+
+	    while (isCalling && !Thread.currentThread().isInterrupted()) { // Check the flag or interrupt status
+	        try {
+	            voice_receive_socket.receive(incomingPacket);
+	            byte[] receivedData = incomingPacket.getData();
+	            int length = incomingPacket.getLength();
+
+	            // Write the audio data to the playback line
+	            playbackLine.write(receivedData, 0, length);
+	        } catch (IOException e) {
+	            System.out.println("Error receiving VoIP packet: " + e.getMessage());
+	        }
+	    }
+
+	    // Clean up resources
+	    playbackLine.drain();
+	    playbackLine.close();
+	    voice_receive_socket.close();
+	    System.out.println("VoIP receiving thread stopped.");
+	}
+			
 	/**
 	 * The method that corresponds to the Action Listener. Whenever an action is performed
 	 * (i.e., one of the buttons is clicked) this method is executed. 
 	 */
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		
-	
-
 		/*
 		 * Check which button was clicked.
 		 */
@@ -147,31 +220,62 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			System.out.println("I'm sending!");
 			
 			
-		}else if(e.getSource() == callButton){
-			
-			// The "Call" button was clicked
-			if(isCalling == false) {
-				/* audio capture new thread */
-				System.out.println("Starting audio capture thread...");
-				isCalling = true;
-				voipCaptureThread = new Thread( () -> handleVoIP());
-				voipCaptureThread.start();
-			}
-			else if (isCalling == true) {
-				/* close line, drain audio buffer and send remaining bytes */
-				isCalling = false;
-				System.out.println("Audio thread should be over now");
-				/*
-				for(int i = 0; i < out.toByteArray().length; i++) {
-					System.out.println(out.toByteArray()[i]);
-				}*/
-			}
+		}else if(e.getSource() == callButton) {
+		    // The "Call" button was clicked
+		    if(isCalling == false) {
+		        // Audio capture new thread
+		        System.out.println("Starting audio capture thread...");
+		        isCalling = true;
+		        voipCaptureThread = new Thread(() -> mockVoIPSender()); // MOCK DATA REMOVE THIS LATER
+		        //voipCaptureThread = new Thread(() -> sendVoIP());
+		        voipCaptureThread.start();
+		        
+		        System.out.println("Starting audio playback thread...");
+		        voipReceiveThread = new Thread(() -> receiveVoIP());
+		        voipReceiveThread.start();
+		    }
+		    else if (isCalling == true) {
+		        // Close line, drain audio buffer, and send remaining bytes
+		        isCalling = false;
+		        try {
+		            // Stop the threads gracefully by interrupting them
+		            voipReceiveThread.interrupt(); // Gracefully stop the receive thread
+		            voipCaptureThread.interrupt(); // Gracefully stop the capture thread
+		            
+		            // Wait for the threads to finish with proper timeout
+		            voipReceiveThread.join(1000); // Wait for the threads to finish
+		            voipCaptureThread.join(1000); // Wait for the threads to finish
+		        } catch (InterruptedException e1) {
+		            System.out.println("Error during thread join: " + e1.getMessage());
+		            // In case of an interruption, set isCalling to false and stop all threads
+		            isCalling = false;
+		            // Handle stopping the threads gracefully
+		            if (voipReceiveThread != null && voipReceiveThread.isAlive()) {
+		                voipReceiveThread.interrupt(); // Interrupt if still running
+		            }
+		            if (voipCaptureThread != null && voipCaptureThread.isAlive()) {
+		                voipCaptureThread.interrupt(); // Interrupt if still running
+		            }
+		        } catch (Exception e2) {
+		            // Handle any other errors
+		            System.out.println("Error during VoIP call ending: " + e2.getMessage());
+		            // Make sure to stop all threads and set isCalling to false
+		            isCalling = false;
+		            if (voipReceiveThread != null && voipReceiveThread.isAlive()) {
+		                voipReceiveThread.interrupt(); // Interrupt if still running
+		            }
+		            if (voipCaptureThread != null && voipCaptureThread.isAlive()) {
+		                voipCaptureThread.interrupt(); // Interrupt if still running
+		            }
+		        }
+
+		        System.out.println("Audio thread should be over now");
+		    }
 		}
-			
 
 	}
 
-	void handleVoIP() {
+	void sendVoIP() {
 		/* open sockets first, then start capturing audio */
 		InetAddress dest;
 		DatagramSocket voice_send_socket;
@@ -285,6 +389,67 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		}
 		System.out.println("Written " + bytes_written_to_file + " bytes to file ~/test.wav");
 		
+	}
+	
+	private static void mockVoIPSender() {
+	    DatagramSocket mockSendSocket = null;
+	    try {
+	        mockSendSocket = new DatagramSocket();
+	        System.out.println("Mock VoIP sender started.");
+	    } catch (SocketException e) {
+	        System.out.println("Cannot open mock sender socket: " + e.getMessage());
+	        return;
+	    }
+
+	    InetAddress dest;
+	    try {
+	        dest = InetAddress.getByName("localhost"); // Send to localhost for testing
+	    } catch (UnknownHostException e) {
+	        System.out.println("Cannot resolve localhost: " + e.getMessage());
+	        return;
+	    }
+
+	    AudioFormat format = new AudioFormat(8000, 8, 1, true, true);
+	    int sampleRate = (int) format.getSampleRate();
+	    int packetLength = 1024; // Same as used in the actual implementation
+	    byte[] packetData = new byte[packetLength];
+
+	    double frequency = 440.0; // A4 note frequency for testing
+	    double increment = (2 * Math.PI * frequency) / sampleRate;
+	    double angle = 0.0;
+
+	    try {
+	        while (isCalling && !Thread.currentThread().isInterrupted()) { // Check for interruption and isCalling flag
+	            // Generate a sine wave
+	            for (int i = 0; i < packetLength; i++) {
+	                packetData[i] = (byte) (Math.sin(angle) * 127); // Scale to byte range
+	                angle += increment;
+	                if (angle > (2 * Math.PI)) {
+	                    angle -= (2 * Math.PI);
+	                }
+	            }
+
+	            // Send the generated packet
+	            DatagramPacket packet = new DatagramPacket(packetData, packetLength, dest, voip_dest_port);
+	            mockSendSocket.send(packet);
+
+	            // Sleep for the duration of the packet to mimic real-time streaming
+	            Thread.sleep((int) (1000.0 * packetLength / sampleRate));
+	        }
+	    } catch (IOException | InterruptedException e) {
+	        if (e instanceof InterruptedException) {
+	            System.out.println("Mock VoIP sender thread interrupted.");
+	        } else {
+	            System.out.println("Error in mock sender: " + e.getMessage());
+	        }
+	    } finally {
+	        // Ensure the socket is properly closed
+	        if (mockSendSocket != null && !mockSendSocket.isClosed()) {
+	            mockSendSocket.close();
+	            System.out.println("Mock VoIP sender socket closed.");
+	        }
+	        System.out.println("Mock VoIP sender stopped.");
+	    }
 	}
 	
 	void sendVoicePackets(int packet_number, DatagramPacket voice_send, DatagramSocket voice_send_socket, InetAddress dest) {
