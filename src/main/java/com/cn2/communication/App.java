@@ -49,7 +49,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	static int text_src_port = 26557;											
 	static int voip_dest_port = 26567;
 	static int voip_src_port = 26565;
-	String dest_addr = "192.168.100.22";
+	static String dest_addr = "192.168.100.22";
 	
 	// Variables for receiving VoIP - public to handle cleanup and avoid leaving socket or play-back open
 	static DatagramSocket voice_receive_socket = null;
@@ -136,16 +136,20 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	
 	// Text Handling Method from the receiving point
 	private static void receiveText() {
-		try (DatagramSocket text_receiver_socket = new DatagramSocket(text_src_port) ) {
-			System.out.println("Listening for messages on port " + text_src_port);
+		InetAddress dest;
+		try (DatagramSocket text_receiver_socket = new DatagramSocket(text_dest_port) ) {
+			System.out.println("Listening for messages on port " + text_dest_port);
 			
 			// Continuously listen for incoming text messages
 		    byte[] buffer = new byte[1024];
 
 		    while (true) {
 		        try {
+
+					dest = InetAddress.getByName(dest_addr);
+					
 		            // Handle text messages
-		            DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
+		            DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length, dest, text_dest_port);
 		            text_receiver_socket.receive(incomingPacket);
 
 		            String receivedMessage = new String(incomingPacket.getData(), 0, incomingPacket.getLength());
@@ -167,8 +171,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	private static void receiveVoIP() {    
 	    try {
 	        // Open the receive socket
-	        voice_receive_socket = new DatagramSocket(voip_src_port); // change this to src after tests are over
-	        System.out.println("VoIP receiving thread started on port " + voip_src_port);
+	        voice_receive_socket = new DatagramSocket(voip_dest_port); // change this to src after tests are over
+	        System.out.println("VoIP receiving thread started on port " + voip_dest_port);
 	    } catch (SocketException e) {
 	        System.out.println("Cannot open receive socket: " + e.getMessage());
 	        return;
@@ -246,6 +250,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 					text_sender_socket = new DatagramSocket(text_src_port);
 				} catch (SocketException e1) {
 					System.out.println("Cannot open socket, quitting...");
+					System.out.print(e1.getMessage());
 					return;
 				}
 				
@@ -302,9 +307,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			
 			
 		}else if(e.getSource() == callButton) {
-		    // The "Call" button was clicked
-			
-			
+		    // The "Call" button was clicked				
 		    if(isCalling == false) { // Start call
 
 		        isCalling = true;
