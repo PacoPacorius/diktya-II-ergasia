@@ -51,12 +51,12 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	static int voip_src_port = 26567;
 	String dest_addr = "192.168.1.15";
 	
-	// Vars for receiving VoIP
+	// Variables for receiving VoIP - public to handle cleanup and avoid leaving socket or play-back open
 	static DatagramSocket voice_receive_socket = null;
 	static SourceDataLine playbackLine = null;
 	
 	// Threads
-	static Thread receiveTextThread = null;
+	static Thread textReceiveThread = null;
 	Thread voipCaptureThread = null;
 	Thread voipReceiveThread = null;
 	
@@ -130,12 +130,12 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	    app.setVisible(true);
 
 	    // 2. Start text thread - infinite loop
-	    receiveTextThread = new Thread( () -> receiveText());
-	    receiveTextThread.start();	    
+	    textReceiveThread = new Thread( () -> receiveText());
+	    textReceiveThread.start();	    
 
 	}
 	
-	// Text Handling Method
+	// Text Handling Method from the receiving point
 	private static void receiveText() {
 		try (DatagramSocket text_receiver_socket = new DatagramSocket(text_src_port) ) {
 			System.out.println("Listening for messages on port " + text_src_port);
@@ -164,6 +164,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	    }
 	}
 	
+	// VoIP Handling Method from the receiving point
 	private static void receiveVoIP() {    
 	    try {
 	        // Open the receive socket
@@ -225,9 +226,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	 */
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		/*
-		 * Check which button was clicked.
-		 */
+		 // Check which button was clicked.
+
 		if (e.getSource() == sendButton){
 			System.out.println("I'm sending!");
 			
