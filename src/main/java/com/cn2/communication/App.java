@@ -202,13 +202,13 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
                 playbackLine.write(receivedData, 0, length);
             } catch (IOException e) {
             	// Cleanup function called in case of error
-                stopReceiveVoIP();	 
+            	receiveVoIPCleanup();	 
             }
         }
 	    
 	}
 	
-	private static void stopReceiveVoIP() {
+	private static void receiveVoIPCleanup() {
 		// Clean up resources
         if (playbackLine != null) {
             playbackLine.drain();
@@ -216,7 +216,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
         }
         if (voice_receive_socket != null && !voice_receive_socket.isClosed()) {
             voice_receive_socket.close();
-            System.out.println("VoIP receiving socket closed.");
         }
 	}
 			
@@ -235,8 +234,10 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			
 		}else if(e.getSource() == callButton) {
 		    // The "Call" button was clicked
-		    if(isCalling == false) {
-		        // Audio capture threads
+			
+			
+		    if(isCalling == false) { // Start call
+
 		        isCalling = true;
 		        voipCaptureThread = new Thread(() -> mockVoIPSender()); // MOCK DATA REMOVE THIS LATER
 		        //voipCaptureThread = new Thread(() -> sendVoIP());
@@ -245,7 +246,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		        voipReceiveThread = new Thread(() -> receiveVoIP());
 		        voipReceiveThread.start();
 		    }
-		    else if (isCalling == true) {
+		    else if (isCalling == true) { // Stop call
 		        // Close line, drain audio buffer, and send remaining bytes
 		        isCalling = false;
 		        try {
@@ -257,14 +258,13 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		            voipReceiveThread.join(1000); 
 		            voipCaptureThread.join(1000); 
 		            
-		            // Call cleanup function
-		            stopReceiveVoIP();
+		            receiveVoIPCleanup();
 		            
-		        } catch (Exception e1) {
-		            System.out.println("Error during thread join: " + e1.getMessage());
+		        } catch (Exception ex) {
+		            System.out.println("Error during thread join: " + ex.getMessage());
 		            // In case of an interruption, set isCalling to false and stop all threads
 		            isCalling = false;	           
-		      		        }
+		      	}
 		    }
 		}
 
@@ -438,7 +438,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	        // Ensure the socket is properly closed
 	        if (mockSendSocket != null && !mockSendSocket.isClosed()) {
 	            mockSendSocket.close();
-	            System.out.println("Mock VoIP sender socket closed.");
 	        }
 	    }
 	}
