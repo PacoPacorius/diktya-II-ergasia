@@ -120,8 +120,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	}
 	
 	/**
-	 * The main method of the application. It continuously listens for
-	 * new messages.
+	 * The main method of the application. It starts the text receiving thread.
 	 */
 	public static void main(String[] args) {
 	    // 1. Create the app's window
