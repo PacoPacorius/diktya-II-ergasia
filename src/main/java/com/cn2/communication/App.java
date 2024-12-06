@@ -230,6 +230,78 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		if (e.getSource() == sendButton){
 			System.out.println("I'm sending!");
 			
+			// The "Send" button was clicked
+			String input_text;	
+			InetAddress dest;
+			DatagramPacket text_sender;
+			DatagramSocket text_sender_socket;
+			byte[] payload;
+			int multiplier; int modulo;
+			
+			
+			/* get text from text area */
+			if(App.inputTextField.getText().length() > 0) {
+				input_text = App.inputTextField.getText();
+				
+				/* create a udp socket */
+				try {
+					text_sender_socket = new DatagramSocket(text_src_port);
+				} catch (SocketException e1) {
+					System.out.println("Cannot open socket, quitting...");
+					return;
+				}
+				
+				/* Initialize udp datagram packet */
+				try {
+					dest = InetAddress.getByName(dest_addr);
+				} catch (UnknownHostException e1) {
+					System.out.println("Cannot get localhost address, quitting...");
+					return;
+				}
+				System.out.println("Sending to: " + dest);
+				
+				
+				/* prepare to divide text string into packets of 1024 */ 
+				payload = input_text.getBytes();
+				multiplier = payload.length / 1024 + 1;
+				modulo = payload.length % 1024;
+				// System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
+				for (int i = 0; i < multiplier; i++) {
+					// System.out.println("i = " + i);
+					
+					/* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes. 
+					 * if the ith packet is loaded, send 1024 bytes. if the final packet is loaded, send any remaining
+					 * bytes (this is always <= 1024).
+					 * */
+					if(i == multiplier - 1) {
+						text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
+					} 
+					else {
+						text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);	
+					}
+					
+					/* send the datagram through the socket */
+					try {
+						text_sender_socket.send(text_sender);
+					} catch (IOException e1) {
+						System.out.println("Cannot send datagram through socket for whatever reason");
+						return;
+					}
+					
+				}
+				
+				/* erase text in input field and show it in text area */
+				App.inputTextField.setText("");
+				App.textArea.append("Me: " + input_text + newline);
+				
+				/* close socket, prevent resource leak */
+				text_sender_socket.close();
+			}
+			else {
+				System.out.println("You need to type something genius!");
+			}
+			
+			
 			
 		}else if(e.getSource() == callButton) {
 		    // The "Call" button was clicked
