@@ -227,9 +227,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	public void actionPerformed(ActionEvent e) {
 		 // Check which button was clicked.
 
-		if (e.getSource() == sendButton){
-			System.out.println("I'm sending!");
-			
+		if (e.getSource() == sendButton){			
 			// The "Send" button was clicked
 			String input_text;	
 			InetAddress dest;
