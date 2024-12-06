@@ -239,22 +239,22 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		        isCalling = false;
 		        try {
 		            // Stop the threads gracefully by interrupting them
-		            voipReceiveThread.interrupt(); // Gracefully stop the receive thread
-		            voipCaptureThread.interrupt(); // Gracefully stop the capture thread
+		            voipReceiveThread.interrupt(); 
+		            voipCaptureThread.interrupt(); 
 		            
 		            // Wait for the threads to finish with proper timeout
-		            voipReceiveThread.join(1000); // Wait for the threads to finish
-		            voipCaptureThread.join(1000); // Wait for the threads to finish
+		            voipReceiveThread.join(1000); 
+		            voipCaptureThread.join(1000); 
 		        } catch (InterruptedException e1) {
 		            System.out.println("Error during thread join: " + e1.getMessage());
 		            // In case of an interruption, set isCalling to false and stop all threads
 		            isCalling = false;
 		            // Handle stopping the threads gracefully
 		            if (voipReceiveThread != null && voipReceiveThread.isAlive()) {
-		                voipReceiveThread.interrupt(); // Interrupt if still running
+		                voipReceiveThread.interrupt(); 
 		            }
 		            if (voipCaptureThread != null && voipCaptureThread.isAlive()) {
-		                voipCaptureThread.interrupt(); // Interrupt if still running
+		                voipCaptureThread.interrupt(); 
 		            }
 		        } catch (Exception e2) {
 		            // Handle any other errors
@@ -262,10 +262,10 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		            // Make sure to stop all threads and set isCalling to false
 		            isCalling = false;
 		            if (voipReceiveThread != null && voipReceiveThread.isAlive()) {
-		                voipReceiveThread.interrupt(); // Interrupt if still running
+		                voipReceiveThread.interrupt(); 
 		            }
 		            if (voipCaptureThread != null && voipCaptureThread.isAlive()) {
-		                voipCaptureThread.interrupt(); // Interrupt if still running
+		                voipCaptureThread.interrupt();
 		            }
 		        }
 
