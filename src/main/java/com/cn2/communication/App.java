@@ -345,7 +345,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	void sendVoIP() {
 		/* open sockets first, then start capturing audio */
 		InetAddress dest;
-		DatagramSocket voice_send_socket;
+		DatagramSocket voice_send_socket = null;
 		DatagramPacket voice_send = null;
 		int packet_number = 1;	/* we are actually not numbering packets, this is to help iterate through the BAOS
 		
@@ -366,12 +366,12 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			return;
 		}
 
-		/* start audio capture */
+		/* set audio format */
 		int buffer_size = 1024;
-		/* endianness should not matter here since we're using PCM, but we're using big endian */
+		/* endianness should not matter here since we're using 8-bit PCM, but we're using big endian */
 		AudioFormat format = new AudioFormat(8000, 8, 1, true, true);	
-		
-		DataLine.Info info = new DataLine.Info(TargetDataLine.class, format); // format is an AudioFormat object
+		/* automatically find the most suitable TargetDataLine for this format */
+		DataLine.Info info = new DataLine.Info(TargetDataLine.class, format); 
 		if (AudioSystem.isLineSupported(info) == false) {
 			System.out.println("Line is not supported! Quitting...");
 			return;
@@ -395,13 +395,12 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		byte[] audio_data = null;
 		int audio_data_length = 0;
 		/* stop when we press call button again */
-		int i = 0;	
 		while (isCalling == true) {
 		   /* Read the next chunk of data from the TargetDataLine to audio buffer */
 		   numBytesRead =  captureLine.read(data, 0, data.length);
 		   /* Save this chunk of data to BAOS */
 		   out.write(data, 0, numBytesRead);
-		   System.out.println("out: " + out.toByteArray()[i]);
+		   //System.out.println("out: " + out.toByteArray()[i]);
 		   
 		   /* send udp datagram */
 		    audio_data = out.toByteArray();
@@ -409,8 +408,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 			
 			if(audio_data_length >= (packet_number) * packet_length) {
 				voice_send = new DatagramPacket(audio_data, (packet_number - 1) * packet_length, packet_length, dest, voip_dest_port);
-//				text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
-//				text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);
 				System.out.println("Sending packet " + (packet_number - 1) + " (" + packet_length + " bytes)");
 				System.out.println("Audio data total length: " + audio_data_length);
 				packet_number = packet_number + 1;
@@ -419,15 +416,15 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 					voice_send_socket.send(voice_send);
 				} catch (IOException e1) {
 					System.out.println("Cannot send voice datagram through socket for whatever reason");
+					captureLine.close();
+					voice_send_socket.close();
 					return;
 				}
 						
 			}
-			i++;
-//		   sendVoicePackets(packet_number, voice_send, voice_send_socket, dest);
-//		   if(i % 4 == 0) {
-//		   		System.out.println("out size: " + out.toByteArray().length);
-//		   }
+/*		   if(i % 4 == 0) {
+		   		System.out.println("out size: " + out.toByteArray().length);
+		   }*/
 		}
 		voice_send_socket.close();
 		captureLine.close();
@@ -437,17 +434,16 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		try {
 			file.createNewFile();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Error creating file");
+			System.out.println("Error creating file, continuing execution nonetheless");
 		}
 		ByteArrayInputStream audio_input = new ByteArrayInputStream(audio_data);
 		AudioInputStream total_collected_audio = new AudioInputStream(audio_input, format, audio_data_length);			
-		int bytes_written_to_file; 
+		int bytes_written_to_file = 0; 
 		try {
 			bytes_written_to_file = AudioSystem.write(total_collected_audio, AudioFileFormat.Type.WAVE, file);
 		} catch (IOException e) {
-			System.out.println("Couldn't write to file");
-			return;
+			System.out.println("Couldn't write to file, continuing execution nonetheless");
+			//return;
 		}
 		try {
 			total_collected_audio.close();
@@ -457,7 +453,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		System.out.println("Written " + bytes_written_to_file + " bytes to file ~/test.wav");
 		
 	}
-/*
+	
+/* mock audio generation function used for testing
 	private static void mockVoIPSender() {
 	    DatagramSocket mockSendSocket = null;
 	    try {
@@ -514,9 +511,6 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	    }
 	}
 */
-	void sendVoicePackets(int packet_number, DatagramPacket voice_send, DatagramSocket voice_send_socket, InetAddress dest) {
-		
-	}
 	
 	/**
 	 * These methods have to do with the GUI. You can use them if you wish to define
