@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024/Arch Linux) (preloaded format=xelatex 2024.12.3)  9 DEC 2024 16:46
+This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024/Arch Linux) (preloaded format=xelatex 2024.12.3)  10 DEC 2024 02:26
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -537,48 +537,39 @@ Package hyperref Info: Link coloring ON on input line 34.
 \@outlinefile=\write3
 \openout3 = `draft.out'.
 
-
-
-Package hyperref Warning: Rerun to get /PageLabels entry.
-
 LaTeX Info: Redefining \rmfamily on input line 34.
 LaTeX Info: Redefining \sffamily on input line 34.
 LaTeX Info: Redefining \ttfamily on input line 34.
-
-LaTeX Warning: Reference `text-simple-n-small' on page 1 undefined on input lin
-e 69.
-
 File: text-simple-small.png Graphic file (type bmp)
 <text-simple-small.png>
+File: textbigsend.png Graphic file (type bmp)
+<textbigsend.png>
+File: text-big-send2.png Graphic file (type bmp)
+<text-big-send2.png>
 
-LaTeX Warning: Reference `text-big' on page 1 undefined on input line 79.
-
-
-Overfull \hbox (10.37843pt too wide) in paragraph at lines 79--83
-[]\TU/FreeSerif(0)/m/n/10 Για την εικόνα [] στείλαμε τον ίδιο τον πηγαίο κώδικα
- μέσω της εφαρμογής για να δοκιμάσουμε τη συμπεριφορά
+Underfull \hbox (badness 10000) in paragraph at lines 93--93
+[]\TU/FreeSerif(0)/m/n/9 (b) |Δεύτερο datagram. Όλα μέχρι και το
  []
 
-File: text_big_send.png Graphic file (type bmp)
-<text_big_send.png>
+File: text-big-send-final.png Graphic file (type bmp)
+<text-big-send-final.png>
+[1
 
-Overfull \hbox (460.72571pt too wide) in paragraph at lines 87--88
-[][] 
- []
-
-! Missing number, treated as zero.
-<to be read again> 
-                   \unhbox 
-l.90         \includegraphics
-                             [scale=0.3]{text\_big\_send.png}
-? x
- 
+] [2] (./draft.aux)
+ ***********
+LaTeX2e <2023-11-01> patch level 1
+L3 programming layer <2024-02-20>
+ ***********
+Package rerunfilecheck Info: File `draft.out' has not changed.
+(rerunfilecheck)             Checksum: 17923A259F162539997D037284654D4D;1471.
+ ) 
 Here is how much of TeX's memory you used:
- 14849 strings out of 476317
- 301688 string characters out of 5792095
- 1923839 words of memory out of 5000000
- 36729 multiletter control sequences out of 15000+600000
+ 14889 strings out of 476317
+ 302479 string characters out of 5792095
+ 1937839 words of memory out of 5000000
+ 36765 multiletter control sequences out of 15000+600000
  562501 words of font info for 77 fonts, out of 8000000 for 9000
  264 hyphenation exceptions out of 8191
- 93i,6n,117p,1129b,509s stack positions out of 10000i,1000n,20000p,200000b,200000s
-No pages of output.
+ 93i,8n,117p,1142b,666s stack positions out of 10000i,1000n,20000p,200000b,200000s
+
+Output written on draft.pdf (2 pages).
