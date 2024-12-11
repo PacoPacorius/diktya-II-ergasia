@@ -431,6 +431,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		
 		/* debug what is being captured */
 		File file = new File("D:\\Σχολή\\9ο εξάμηνο\\Δίκτυα Υπολογιστών ΙΙ\\Εργασία\\test.wav");
+	//  File file = new File("~/test.wav");
 		try {
 			file.createNewFile();
 		} catch (IOException e) {
