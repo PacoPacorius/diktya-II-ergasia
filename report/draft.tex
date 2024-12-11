@@ -164,6 +164,23 @@ offset $1*1024$ bytes από την αρχή του \textit{audio\_data}. Όμο
 % αν χρειάζεται μόνο 15 λεπτά όμως;
 
 \subsection{Παράδειγμα VoIP μέσω Wireshark}
+Στις εικόνες~\ref{voice-stream} και~\ref{voice-small-packets}, καταγραφή datagram φωνής από το Wireshark.
+Δεν μπορούσαμε να έχουμε ορατά τα payload και header του datagram την ίδια στιγμή με μέγεθος $payload = 1024$,
+οπότε για τη δεύτερη φωτογραφία προσωρινά μικρύναμε το μήκος του payload σε $128$ bytes. Διευκρινίζουμε ότι το 
+πρόγραμμά μας δεν δουλεύει με τον επιθυμητό τρόπο για payload των $128$ bytes. Δεν τροποποιήσαμε κανένα
+άλλο κομμάτι του κώδικά μας, οπότε $1024 - 128 = 896$ bytes χάνονταν σε κάθε datagram που στέλναμε.
+Ως αποτέλεσμα στη μεριά της λήψης ακουγόταν μόνο ένας ενοχλητικός θόρυβος. Η αλλαγή σε μικρότερου μήκους πακέτα 
+έγινε μόνο για λόγους επίδειξης, ουσιαστικά για να χωρέσουμε ολόκληρο το datagram στην οθόνη.
+
+\begin{figure}%
+    \centering
+    \subcaptionbox{Ροή datagrams ήχου\label{voice-stream}}
+    {\includegraphics[scale=0.1]{voice-stream.png}}
+    \subcaptionbox{Ροή datagrams ήχου όπου είναι ορατό όλο το header και όλο το payload\label{voice-small-packets}}
+    {\includegraphics[scale=0.1]{voice-small-packets2.png}}
+    \caption{Καταγραφή αποστολής πακέτων φωνής με Wireshark}
+\end{figure}
+
 \section{Συμπεράσματα;}
 Χρειάζεται αυτό το section; Ο Τσακ Νόρις είπε ``έλα μου ντε'' και ο Ντε ήρθε\ldots
 \end{document}
