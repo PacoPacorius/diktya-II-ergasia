@@ -49,7 +49,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	static int text_src_port = 26557;											
 	static int voip_dest_port = 26567;
 	static int voip_src_port = 26565;
-	static String dest_addr = "192.168.100.22";
+	static String dest_addr = "192.168.1.15";
 	
 	// Variables for receiving VoIP - public to handle cleanup and avoid leaving socket or play-back open
 	static DatagramSocket voice_receive_socket = null;
@@ -179,7 +179,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	    }
 
 	    // Set up audio play-back
-	    AudioFormat format = new AudioFormat(24000, 8, 1, true, true);
+	    AudioFormat format = new AudioFormat(8000, 8, 1, true, true);
 	    DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
 
 	    try {
@@ -374,6 +374,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		DataLine.Info info = new DataLine.Info(TargetDataLine.class, format); 
 		if (AudioSystem.isLineSupported(info) == false) {
 			System.out.println("Line is not supported! Quitting...");
+			voice_send_socket.close();
 			return;
 		}
 		/* Obtain and open the line */
