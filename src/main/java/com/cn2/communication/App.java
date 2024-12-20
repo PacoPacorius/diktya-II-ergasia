@@ -61,12 +61,12 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	Thread voipReceiveThread = null;
 	
 	/* ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧
-	 * ▧ ▧ vars for voip send ▧ ▧
+	 * ▧ ▧ vars for voip send ▧ 
 	 * ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ ▧ */
 	AudioFormat sample_format; /* encoding technique, channels, bps, byte order, signed */
 	static boolean isCalling = false;
 	TargetDataLine captureLine = null;
-	static int packet_length = 1024;
+	static int packet_length = 1500;
 	ByteArrayOutputStream out = null;
 	
 	/* keeps eclipse from complaining */
@@ -171,7 +171,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	private static void receiveVoIP() {    
 	    try {
 	        // Open the receive socket
-	        voice_receive_socket = new DatagramSocket(voip_dest_port); // change this to src after tests are over
+	        voice_receive_socket = new DatagramSocket(voip_dest_port); 
 	        System.out.println("VoIP receiving thread started on port " + voip_dest_port);
 	    } catch (SocketException e) {
 	        System.out.println("Cannot open receive socket: " + e.getMessage());
@@ -431,8 +431,8 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		captureLine.close();
 		
 		/* debug what is being captured */
-		File file = new File("D:\\Σχολή\\9ο εξάμηνο\\Δίκτυα Υπολογιστών ΙΙ\\Εργασία\\test.wav");
-	//  File file = new File("~/test.wav");
+		//File file = new File("D:\\Σχολή\\9ο εξάμηνο\\Δίκτυα Υπολογιστών ΙΙ\\Εργασία\\test.wav");
+		File file = new File("/home/pacopacorius/test.wav");
 		try {
 			file.createNewFile();
 		} catch (IOException e) {
