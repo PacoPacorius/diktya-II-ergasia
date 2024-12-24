@@ -1,14 +1,12 @@
-/* TODO: 
- * 1. make voice sending a separate thread -- done
- * 2. make clicking the call button again terminate the call -- done
- * 3. dump captured packets to a file, test what is being captured -- done
- * 4. send packets over udp, packet length 1024 -- well, it's sending something alright! 
- * 		a. still need to flush the BAOS probably!
- */
 package com.cn2.communication;
 
 import java.io.*;
 import java.net.*;
+
+import java.security.*;
+import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import javax.swing.JFrame;
 import javax.swing.JTextField;
@@ -42,6 +40,21 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	final static String newline="\n";		
 	static JButton callButton;				
 	
+	// Cryptography variables
+    private static final String AES_ALGORITHM = "AES/CBC/PKCS5PADDING";
+    private static final byte[] AES_KEY = "1234567890123456".getBytes(); // Example 16-byte key
+    private static SecretKey secretKey;
+    private static Cipher cipher;
+
+    static {
+        try {
+            secretKey = new SecretKeySpec(AES_KEY, "AES");
+            cipher = Cipher.getInstance(AES_ALGORITHM);
+        } catch (Exception e) {
+            System.err.println("Error initializing cryptography: " + e.getMessage());
+        }
+    }
+    
 	// Variable initialization
 	
 	// Ports and address
@@ -50,6 +63,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	static int voip_dest_port = 26567;
 	static int voip_src_port = 26565;
 	static String dest_addr = "192.168.1.15";
+	// static String dest_addr = "127.0.0.1"; //local host
 	
 	// Variables for receiving VoIP - public to handle cleanup and avoid leaving socket or play-back open
 	static DatagramSocket voice_receive_socket = null;
@@ -136,33 +150,37 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	
 	// Text Handling Method from the receiving point
 	private static void receiveText() {
-		InetAddress dest;
-		try (DatagramSocket text_receiver_socket = new DatagramSocket(text_dest_port) ) {
-			System.out.println("Listening for messages on port " + text_dest_port);
-			
-			// Continuously listen for incoming text messages
-		    byte[] buffer = new byte[packet_length];
+	    InetAddress dest;
+	    try (DatagramSocket text_receiver_socket = new DatagramSocket(text_dest_port)) {
+	        System.out.println("Listening for messages on port " + text_dest_port);
 
-		    while (true) {
-		        try {
+	        // Continuously listen for incoming text messages
+	        byte[] buffer = new byte[packet_length];
 
-					dest = InetAddress.getByName(dest_addr);
-					
-		            // Handle text messages
-		            DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length, dest, text_dest_port);
-		            text_receiver_socket.receive(incomingPacket);
+	        while (true) {
+	            try {
+	                dest = InetAddress.getByName(dest_addr);
 
-		            String receivedMessage = new String(incomingPacket.getData(), 0, incomingPacket.getLength());
-		            App.textArea.append("Friend: " + receivedMessage + newline);
+	                // Handle text messages
+	                DatagramPacket incomingPacket = new DatagramPacket(buffer, buffer.length);
+	                text_receiver_socket.receive(incomingPacket);
 
+	                byte[] encryptedData = new byte[incomingPacket.getLength()];
+	                System.arraycopy(incomingPacket.getData(), 0, encryptedData, 0, incomingPacket.getLength());
+	                
+	                byte[] decryptedMessage = decrypt(encryptedData);
+	                String receivedMessage = new String(decryptedMessage).trim();
 
-		        } catch (IOException e) {
-		            System.out.println("Error receiving message: " + e.getMessage());
-		        }
-		    }
-		    
-			
-		} catch (Exception e) {
+	                App.textArea.append("Friend: " + receivedMessage + newline);
+
+	            } catch (IOException e) {
+	                System.out.println("Error receiving message: " + e.getMessage());
+	            } catch (Exception e) {
+	                System.out.println("Decryption error: " + e.getMessage());
+	            }
+	        }
+
+	    } catch (Exception e) {
 	        System.out.println("Error in text handling: " + e.getMessage());
 	    }
 	}
@@ -231,79 +249,82 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	public void actionPerformed(ActionEvent e) {
 		 // Check which button was clicked.
 
-		if (e.getSource() == sendButton){			
-			// The "Send" button was clicked
-			String input_text;	
-			InetAddress dest;
-			DatagramPacket text_sender;
-			DatagramSocket text_sender_socket;
-			byte[] payload;
-			int multiplier; int modulo;
-			
-			
-			/* get text from text area */
-			if(App.inputTextField.getText().length() > 0) {
-				input_text = App.inputTextField.getText();
-				
-				/* create a udp socket */
-				try {
-					text_sender_socket = new DatagramSocket(text_src_port);
-				} catch (SocketException e1) {
-					System.out.println("Cannot open socket, quitting...");
-					System.out.print(e1.getMessage());
-					return;
-				}
-				
-				/* Initialize udp datagram packet */
-				try {
-					dest = InetAddress.getByName(dest_addr);
-				} catch (UnknownHostException e1) {
-					System.out.println("Cannot get localhost address, quitting...");
-					return;
-				}
-				System.out.println("Sending to: " + dest);
-				
-				
-				/* prepare to divide text string into packets of 1024 */ 
-				payload = input_text.getBytes();
-				multiplier = payload.length / packet_length + 1;
-				modulo = payload.length % packet_length;
-				// System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
-				for (int i = 0; i < multiplier; i++) {
-					// System.out.println("i = " + i);
-					
-					/* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes. 
-					 * if the ith packet is loaded, send 1024 bytes. if the final packet is loaded, send any remaining
-					 * bytes (this is always <= 1024).
-					 * */
-					if(i == multiplier - 1) {
-						text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
-					} 
-					else {
-						text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);	
-					}
-					
-					/* send the datagram through the socket */
-					try {
-						text_sender_socket.send(text_sender);
-					} catch (IOException e1) {
-						System.out.println("Cannot send datagram through socket for whatever reason");
-						return;
-					}
-					
-				}
-				
-				/* erase text in input field and show it in text area */
-				App.inputTextField.setText("");
-				App.textArea.append("Me: " + input_text + newline);
-				
-				/* close socket, prevent resource leak */
-				text_sender_socket.close();
-			}
-			else {
-				System.out.println("You need to type something genius!");
-			}
-			
+		if (e.getSource() == sendButton){            
+		    // The "Send" button was clicked
+		    String input_text;    
+		    InetAddress dest;
+		    DatagramPacket text_sender;
+		    DatagramSocket text_sender_socket;
+		    byte[] payload;
+		    int multiplier; int modulo;
+
+		    /* get text from text area */
+		    if(App.inputTextField.getText().length() > 0) {
+		        input_text = App.inputTextField.getText();
+
+		        /* create a udp socket */
+		        try {
+		            text_sender_socket = new DatagramSocket(text_src_port);
+		        } catch (SocketException e1) {
+		            System.out.println("Cannot open socket, quitting...");
+		            System.out.print(e1.getMessage());
+		            return;
+		        }
+
+		        /* Initialize udp datagram packet */
+		        try {
+		            dest = InetAddress.getByName(dest_addr);
+		        } catch (UnknownHostException e1) {
+		            System.out.println("Cannot get localhost address, quitting...");
+		            return;
+		        }
+		        System.out.println("Sending to: " + dest);
+
+		        /* prepare to divide text string into packets of 1024 */ 
+		        try {
+		            payload = encrypt(input_text.getBytes());
+		        } catch (Exception e1) {
+		            System.out.println("Error encrypting message: " + e1.getMessage());
+		            return;
+		        }
+
+		        multiplier = payload.length / packet_length + 1;
+		        modulo = payload.length % packet_length;
+		        // System.out.println("Multiplier = " + (multiplier - 1) + ", modulo = " + modulo);
+		        for (int i = 0; i < multiplier; i++) {
+		            // System.out.println("i = " + i);
+
+		            /* load up the ith packet of 1024 bytes, or the final (multiplier - 1)th packet of modulo bytes. 
+		             * if the ith packet is loaded, send 1024 bytes. if the final packet is loaded, send any remaining
+		             * bytes (this is always <= 1024).
+		             */
+		            if(i == multiplier - 1) {
+		                text_sender = new DatagramPacket(payload, i * packet_length, payload.length - i * packet_length, dest, text_dest_port);
+		            } 
+		            else {
+		                text_sender = new DatagramPacket(payload, i * packet_length, packet_length, dest, text_dest_port);    
+		            }
+
+		            /* send the datagram through the socket */
+		            try {
+		                text_sender_socket.send(text_sender);
+		            } catch (IOException e1) {
+		                System.out.println("Cannot send datagram through socket for whatever reason");
+		                return;
+		            }
+		        }
+
+		        /* erase text in input field and show it in text area */
+		        App.inputTextField.setText("");
+		        App.textArea.append("Me: " + input_text + newline);
+
+		        /* close socket, prevent resource leak */
+		        text_sender_socket.close();
+		    } else {
+		        System.out.println("You need to type something genius!");
+		    }
+		
+
 			
 			
 		}else if(e.getSource() == callButton) {
@@ -455,6 +476,43 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 		System.out.println("Written " + bytes_written_to_file + " bytes to file ~/test.wav");
 		
 	}
+	private static byte[] encrypt(byte[] data) throws Exception {
+	    // Generate a new IV
+	    byte[] iv = new byte[16];
+	    SecureRandom random = new SecureRandom();
+	    random.nextBytes(iv);
+
+	    // Initialize cipher with IV
+	    IvParameterSpec ivSpec = new IvParameterSpec(iv);
+	    cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
+
+	    // Encrypt the data
+	    byte[] encryptedData = cipher.doFinal(data);
+
+	    // Prepend IV to the encrypted data
+	    byte[] combined = new byte[iv.length + encryptedData.length];
+	    System.arraycopy(iv, 0, combined, 0, iv.length);
+	    System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
+
+	    return combined;
+	}
+
+	private static byte[] decrypt(byte[] data) throws Exception {
+	    // Extract the IV (first 16 bytes)
+	    byte[] iv = new byte[16];
+	    System.arraycopy(data, 0, iv, 0, 16);
+	    
+	    // Extract the actual encrypted data
+	    byte[] encryptedData = new byte[data.length - 16];
+	    System.arraycopy(data, 16, encryptedData, 0, encryptedData.length);
+
+	    // Initialize cipher with IV
+	    IvParameterSpec ivSpec = new IvParameterSpec(iv);
+	    cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec);
+	    
+	    return cipher.doFinal(encryptedData);
+	}
+
 	
 /* mock audio generation function used for testing
 	private static void mockVoIPSender() {
