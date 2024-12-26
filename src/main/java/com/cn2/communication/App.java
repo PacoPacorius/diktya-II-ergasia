@@ -62,7 +62,7 @@ public class App extends Frame implements WindowListener, ActionListener, Runnab
 	static int text_src_port = 26557;											
 	static int voip_dest_port = 26567;
 	static int voip_src_port = 26565;
-	static String dest_addr = "192.168.1.15";
+	static String dest_addr = "192.168.1.164";
 	// static String dest_addr = "127.0.0.1"; //local host
 	
 	// Variables for receiving VoIP - public to handle cleanup and avoid leaving socket or play-back open
